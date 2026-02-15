@@ -1,5 +1,5 @@
-import React, { useMemo, useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import React, { useMemo, useState, useEffect } from 'react'
+import { useParams, Link } from 'react-router-dom'
 import {
   ArrowLeft,
   CalendarCheck,
@@ -14,47 +14,47 @@ import {
   Shield,
   Users,
   Phone,
-} from "lucide-react";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+} from 'lucide-react'
+import { toast, ToastContainer } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
 
 // Clerk client hooks
-import { useAuth, useUser } from "@clerk/clerk-react";
-import { doctorDetailStyles } from "../assets/dummyStyles";
+import { useAuth, useUser } from '@clerk/clerk-react'
+import { doctorDetailStyles } from '../assets/dummyStyles'
 
-const API_BASE = "http://localhost:4000";
+const API_BASE = import.meta.env.VITE_BACKEND_URL
 
 function getScheduleDates(schedule) {
-  if (!schedule) return [];
+  if (!schedule) return []
 
   const keys =
-    typeof schedule === "object" && !Array.isArray(schedule)
+    typeof schedule === 'object' && !Array.isArray(schedule)
       ? Object.keys(schedule)
-      : [];
+      : []
 
   // Parse keys into Date objects (supporting YYYY-MM-DD and ISO)
   const parsed = keys
     .map((k) => {
-      const d = new Date(k);
-      if (!isNaN(d)) return { key: k, date: d };
+      const d = new Date(k)
+      if (!isNaN(d)) return { key: k, date: d }
 
       // fallback: try splitting YYYY-MM-DD
-      const parts = k.split("-").map((n) => Number(n));
+      const parts = k.split('-').map((n) => Number(n))
       if (parts.length >= 3) {
-        const [y, m, day] = parts;
-        const dd = new Date(y, m - 1, day);
-        if (!isNaN(dd)) return { key: k, date: dd };
+        const [y, m, day] = parts
+        const dd = new Date(y, m - 1, day)
+        if (!isNaN(dd)) return { key: k, date: dd }
       }
-      return null;
+      return null
     })
-    .filter(Boolean);
+    .filter(Boolean)
 
   // Normalize compare by date-only (use UTC to avoid timezone time-of-day issues)
   const dateOnlyValue = (d) =>
-    Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+    Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())
 
-  const today = new Date();
-  const todayVal = dateOnlyValue(today);
+  const today = new Date()
+  const todayVal = dateOnlyValue(today)
 
   const past = parsed
     .filter((p) => dateOnlyValue(p.date) < todayVal)
@@ -62,7 +62,7 @@ function getScheduleDates(schedule) {
       (a, b) =>
         // most recent past first (descending)
         dateOnlyValue(b.date) - dateOnlyValue(a.date),
-    );
+    )
 
   const future = parsed
     .filter((p) => dateOnlyValue(p.date) >= todayVal)
@@ -70,10 +70,10 @@ function getScheduleDates(schedule) {
       (a, b) =>
         // earliest first (ascending)
         dateOnlyValue(a.date) - dateOnlyValue(b.date),
-    );
+    )
 
   // Return array of Date objects in desired order
-  return [...past, ...future].map((p) => p.date);
+  return [...past, ...future].map((p) => p.date)
 }
 
 /**
@@ -81,124 +81,124 @@ function getScheduleDates(schedule) {
  * Returns empty string if no digits.
  */
 function normalizePhoneTo10(phone) {
-  if (!phone) return "";
-  const digits = ("" + phone).replace(/\D/g, "");
-  if (!digits) return "";
+  if (!phone) return ''
+  const digits = ('' + phone).replace(/\D/g, '')
+  if (!digits) return ''
   // prefer last 10 digits (common when country code present)
-  return digits.length <= 10 ? digits : digits.slice(-10);
+  return digits.length <= 10 ? digits : digits.slice(-10)
 }
 
 export default function DoctorDetail() {
-  const { id } = useParams();
+  const { id } = useParams()
 
-  const [doctor, setDoctor] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [doctor, setDoctor] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
-  const [selectedDate, setSelectedDate] = useState(null);
-  const [selectedSlot, setSelectedSlot] = useState("");
-  const [isVisible, setIsVisible] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(null)
+  const [selectedSlot, setSelectedSlot] = useState('')
+  const [isVisible, setIsVisible] = useState(false)
 
   const [formData, setFormData] = useState({
-    name: "",
-    age: "",
-    mobile: "",
-    gender: "",
-    email: "",
-  });
+    name: '',
+    age: '',
+    mobile: '',
+    gender: '',
+    email: '',
+  })
 
-  const [paymentMethod, setPaymentMethod] = useState("Cash");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState('Cash')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Clerk hooks
-  const { getToken, isLoaded: authLoaded } = useAuth();
-  const { isSignedIn, user, isLoaded: userLoaded } = useUser();
+  const { getToken, isLoaded: authLoaded } = useAuth()
+  const { isSignedIn, user, isLoaded: userLoaded } = useUser()
 
   useEffect(() => {
-    setIsVisible(true);
-  }, []);
+    setIsVisible(true)
+  }, [])
 
   // Prefill the form fields quietly if user is available (no UI markup change)
   useEffect(() => {
-    if (!userLoaded) return;
+    if (!userLoaded) return
     if (user) {
       const fullName =
         user.fullName ||
-        `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
-        "";
+        `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
+        ''
       const rawPhone =
         user.primaryPhone ||
         (user.phoneNumbers && user.phoneNumbers.length > 0
           ? user.phoneNumbers[0]
-          : "") ||
-        "";
-      const phone = normalizePhoneTo10(rawPhone);
+          : '') ||
+        ''
+      const phone = normalizePhoneTo10(rawPhone)
       const email =
         (user.emailAddresses && user.emailAddresses[0]?.emailAddress) ||
         user.primaryEmailAddress ||
-        "";
+        ''
 
       setFormData((prev) => ({
         ...prev,
         name: prev.name || fullName,
         mobile: prev.mobile || phone,
         email: prev.email || email,
-      }));
+      }))
     }
-  }, [userLoaded, user]);
+  }, [userLoaded, user])
 
   useEffect(() => {
-    let mounted = true;
+    let mounted = true
     async function fetchDoctor() {
-      setLoading(true);
-      setError(null);
+      setLoading(true)
+      setError(null)
       try {
-        const res = await fetch(`${API_BASE}/api/doctors/${id}`);
+        const res = await fetch(`${API_BASE}/api/doctors/${id}`)
         if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
+          const body = await res.json().catch(() => ({}))
           throw new Error(
             body.message || `Failed to fetch (status ${res.status})`,
-          );
+          )
         }
-        const payload = await res.json();
-        const doc = payload?.data || null;
-        if (mounted) setDoctor(doc);
+        const payload = await res.json()
+        const doc = payload?.data || null
+        if (mounted) setDoctor(doc)
       } catch (err) {
-        if (mounted) setError(err.message || "Failed to fetch doctor");
+        if (mounted) setError(err.message || 'Failed to fetch doctor')
       } finally {
-        if (mounted) setLoading(false);
+        if (mounted) setLoading(false)
       }
     }
-    fetchDoctor();
+    fetchDoctor()
     return () => {
-      mounted = false;
-    };
-  }, [id]);
+      mounted = false
+    }
+  }, [id])
 
-  const next7 = useMemo(() => getScheduleDates(doctor?.schedule), [doctor]);
-  const fee = Number(doctor?.fee ?? doctor?.fees ?? 0);
+  const next7 = useMemo(() => getScheduleDates(doctor?.schedule), [doctor])
+  const fee = Number(doctor?.fee ?? doctor?.fees ?? 0)
 
   const slots = useMemo(() => {
-    if (!selectedDate || !doctor?.schedule) return [];
-    const key = selectedDate.toISOString().split("T")[0];
-    return doctor.schedule && doctor.schedule[key] ? doctor.schedule[key] : [];
-  }, [selectedDate, doctor]);
+    if (!selectedDate || !doctor?.schedule) return []
+    const key = selectedDate.toISOString().split('T')[0]
+    return doctor.schedule && doctor.schedule[key] ? doctor.schedule[key] : []
+  }, [selectedDate, doctor])
 
   // Mobile input handlers: only digits, max 10
   const handleMobileChange = (value) => {
-    const digits = value.replace(/\D/g, "").slice(0, 10);
-    setFormData((prev) => ({ ...prev, mobile: digits }));
-  };
+    const digits = value.replace(/\D/g, '').slice(0, 10)
+    setFormData((prev) => ({ ...prev, mobile: digits }))
+  }
 
   const handleMobilePaste = (e) => {
-    e.preventDefault();
-    const pasted = (e.clipboardData || window.clipboardData).getData("text");
-    const digits = pasted.replace(/\D/g, "").slice(0, 10);
-    setFormData((prev) => ({ ...prev, mobile: digits }));
-  };
+    e.preventDefault()
+    const pasted = (e.clipboardData || window.clipboardData).getData('text')
+    const digits = pasted.replace(/\D/g, '').slice(0, 10)
+    setFormData((prev) => ({ ...prev, mobile: digits }))
+  }
 
   const handleBooking = async () => {
-    if (isSubmitting) return;
+    if (isSubmitting) return
 
     // Validate patient details
     if (
@@ -207,61 +207,61 @@ export default function DoctorDetail() {
       !formData.mobile ||
       !formData.gender
     ) {
-      toast.error("Please fill all patient details!", {
-        position: "top-center",
+      toast.error('Please fill all patient details!', {
+        position: 'top-center',
         autoClose: 2000,
-      });
-      return;
+      })
+      return
     }
 
     // Mobile must be exactly 10 digits
-    const mobileDigits = (formData.mobile || "").replace(/\D/g, "");
+    const mobileDigits = (formData.mobile || '').replace(/\D/g, '')
     if (mobileDigits.length !== 10) {
-      toast.error("Mobile number must be exactly 10 digits.", {
-        position: "top-center",
+      toast.error('Mobile number must be exactly 10 digits.', {
+        position: 'top-center',
         autoClose: 2500,
-      });
-      return;
+      })
+      return
     }
 
     if (!selectedDate || !selectedSlot) {
-      toast.error("Please select a date and time slot", {
-        position: "top-center",
+      toast.error('Please select a date and time slot', {
+        position: 'top-center',
         autoClose: 2000,
-      });
-      return;
+      })
+      return
     }
 
     if (!authLoaded || !userLoaded) {
-      toast.error("Authentication not ready. Please try again in a moment.", {
-        position: "top-center",
+      toast.error('Authentication not ready. Please try again in a moment.', {
+        position: 'top-center',
         autoClose: 2000,
-      });
-      return;
+      })
+      return
     }
 
     if (!isSignedIn) {
-      toast.error("You must sign in to create an appointment.", {
-        position: "top-center",
+      toast.error('You must sign in to create an appointment.', {
+        position: 'top-center',
         autoClose: 2200,
-      });
-      return;
+      })
+      return
     }
 
-    setIsSubmitting(true);
+    setIsSubmitting(true)
 
-    const dateISO = selectedDate.toISOString().split("T")[0]; // YYYY-MM-DD
+    const dateISO = selectedDate.toISOString().split('T')[0] // YYYY-MM-DD
 
     // prefer fields from doctor object (this is only sent as a hint; backend will use DB)
-    const doctorNameValue = doctor?.name || "";
+    const doctorNameValue = doctor?.name || ''
     const specialityValue =
       doctor?.specialization ||
       doctor?.speciality ||
       doctor?.specialityName ||
-      "";
+      ''
 
     // optional owner from doctor object (backend will prefer doctor.owner)
-    const ownerValue = doctor?.owner || undefined;
+    const ownerValue = doctor?.owner || undefined
 
     const payload = {
       doctorId: doctor._id || doctor.id,
@@ -269,9 +269,9 @@ export default function DoctorDetail() {
       speciality: specialityValue,
       owner: ownerValue,
       // NEW: send image hints (optional — backend prefers DB but accepts these)
-      doctorImageUrl: doctor?.imageUrl || doctor?.image || "",
+      doctorImageUrl: doctor?.imageUrl || doctor?.image || '',
       doctorImagePublicId:
-        doctor?.imagePublicId || doctor?.image?.publicId || "",
+        doctor?.imagePublicId || doctor?.image?.publicId || '',
       patientName: formData.name,
       mobile: mobileDigits,
       age: formData.age,
@@ -280,68 +280,68 @@ export default function DoctorDetail() {
       time: selectedSlot,
       fee: fee,
       fees: fee,
-      paymentMethod: paymentMethod || "Online",
+      paymentMethod: paymentMethod || 'Online',
       email: formData.email || undefined,
-    };
+    }
 
     try {
-      const token = await getToken();
+      const token = await getToken()
       if (!token) {
-        throw new Error("Failed to obtain authentication token.");
+        throw new Error('Failed to obtain authentication token.')
       }
 
       const res = await fetch(`${API_BASE}/api/appointments`, {
-        method: "POST",
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
-      });
+      })
 
-      const body = await res.json().catch(() => null);
+      const body = await res.json().catch(() => null)
       if (!res.ok) {
         const message =
-          body?.message || body?.error || `Booking failed (${res.status})`;
-        toast.error(message, { position: "top-center" });
-        setIsSubmitting(false);
-        return;
+          body?.message || body?.error || `Booking failed (${res.status})`
+        toast.error(message, { position: 'top-center' })
+        setIsSubmitting(false)
+        return
       }
 
       // If checkoutUrl is returned -> redirect to Stripe Checkout
       if (body.checkoutUrl) {
         // redirect user to Stripe Checkout
-        window.location.href = body.checkoutUrl;
-        return;
+        window.location.href = body.checkoutUrl
+        return
       }
 
       // Booking created (Cash or free)
-      toast.success("Booking successful", {
-        position: "top-center",
+      toast.success('Booking successful', {
+        position: 'top-center',
         autoClose: 1500,
-      });
+      })
 
       // navigate to appointments list (you can change this path)
       setTimeout(() => {
-        window.location.href = "/appointments?payment_status=Pending";
-      }, 700);
+        window.location.href = '/appointments?payment_status=Pending'
+      }, 700)
     } catch (err) {
-      console.error("Booking error:", err);
+      console.error('Booking error:', err)
       toast.error(
-        err?.message || "Network error - booking failed (auth or server issue)",
-        { position: "top-center" },
-      );
+        err?.message || 'Network error - booking failed (auth or server issue)',
+        { position: 'top-center' },
+      )
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   if (loading)
     return (
       <div className={doctorDetailStyles.loadingContainer}>
         <div>Loading doctor...</div>
       </div>
-    );
+    )
 
   if (error)
     return (
@@ -349,13 +349,13 @@ export default function DoctorDetail() {
         <div className={doctorDetailStyles.errorContent}>
           <div className={doctorDetailStyles.errorText}>Error</div>
           <div className={doctorDetailStyles.errorMessage}>{error}</div>
-          <Link to="/doctors" className={doctorDetailStyles.backButton}>
+          <Link to='/doctors' className={doctorDetailStyles.backButton}>
             <ArrowLeft size={20} />
             Back to Doctors
           </Link>
         </div>
       </div>
-    );
+    )
 
   if (!doctor)
     return (
@@ -363,13 +363,13 @@ export default function DoctorDetail() {
         <div className={doctorDetailStyles.notFoundContent}>
           <div className={doctorDetailStyles.notFoundEmoji}>😷</div>
           <h1 className={doctorDetailStyles.notFoundTitle}>Doctor Not Found</h1>
-          <Link to="/doctors" className={doctorDetailStyles.backButton}>
+          <Link to='/doctors' className={doctorDetailStyles.backButton}>
             <ArrowLeft size={20} />
             Back to Doctors
           </Link>
         </div>
       </div>
-    );
+    )
 
   return (
     <div className={doctorDetailStyles.pageContainer}>
@@ -378,14 +378,14 @@ export default function DoctorDetail() {
       <div className={doctorDetailStyles.headerContainer}>
         <div className={doctorDetailStyles.headerContent}>
           <div className={doctorDetailStyles.headerFlex}>
-            <Link to="/doctors" className={doctorDetailStyles.headerBackButton}>
+            <Link to='/doctors' className={doctorDetailStyles.headerBackButton}>
               <ArrowLeft size={18} />
               <span className={doctorDetailStyles.headerBackButtonText}>
                 Back
               </span>
             </Link>
 
-            <div className="flex items-center gap-3">
+            <div className='flex items-center gap-3'>
               <h1 className={doctorDetailStyles.headerTitle}>Doctor Profile</h1>
             </div>
 
@@ -414,11 +414,11 @@ export default function DoctorDetail() {
 
                 <img
                   src={
-                    doctor.imageUrl || doctor.image || "/placeholder-doctor.jpg"
+                    doctor.imageUrl || doctor.image || '/placeholder-doctor.jpg'
                   }
                   alt={doctor.name}
                   className={doctorDetailStyles.avatarImage}
-                  style={{ objectPosition: "center" }}
+                  style={{ objectPosition: 'center' }}
                 />
               </div>
 
@@ -455,7 +455,7 @@ export default function DoctorDetail() {
 
             {/* RIGHT */}
             <div className={doctorDetailStyles.rightColumn}>
-              <div className="space-y-3">
+              <div className='space-y-3'>
                 <h1 className={doctorDetailStyles.doctorName}>{doctor.name}</h1>
                 <div className={doctorDetailStyles.specializationBadge}>
                   <Zap className={doctorDetailStyles.badgeIcon} />
@@ -505,9 +505,9 @@ export default function DoctorDetail() {
                       Availability
                     </div>
                     <div className={doctorDetailStyles.infoValue}>
-                      {doctor.availability === "Available" || doctor.available
-                        ? "Available"
-                        : "Available Soon"}
+                      {doctor.availability === 'Available' || doctor.available
+                        ? 'Available'
+                        : 'Available Soon'}
                     </div>
                   </div>
                 </div>
@@ -542,7 +542,7 @@ export default function DoctorDetail() {
               {/* LEFT COLUMN */}
               <div className={doctorDetailStyles.dateSection}>
                 <h3 className={doctorDetailStyles.dateTitle}>
-                  <CalendarCheck className={doctorDetailStyles.dateTitleIcon} />{" "}
+                  <CalendarCheck className={doctorDetailStyles.dateTitleIcon} />{' '}
                   Select Date
                 </h3>
 
@@ -550,7 +550,7 @@ export default function DoctorDetail() {
                   <div className={doctorDetailStyles.dateButtonsContainer}>
                     {next7.map((date) => {
                       const isSelected =
-                        selectedDate?.toDateString() === date.toDateString();
+                        selectedDate?.toDateString() === date.toDateString()
                       return (
                         <button
                           key={date.toISOString()}
@@ -563,21 +563,21 @@ export default function DoctorDetail() {
                         >
                           <div className={doctorDetailStyles.dateContent}>
                             <div className={doctorDetailStyles.dateWeekday}>
-                              {date.toLocaleDateString("en-US", {
-                                weekday: "short",
+                              {date.toLocaleDateString('en-US', {
+                                weekday: 'short',
                               })}
                             </div>
                             <div className={doctorDetailStyles.dateDay}>
                               {date.getDate()}
                             </div>
                             <div className={doctorDetailStyles.dateMonth}>
-                              {date.toLocaleDateString("en-US", {
-                                month: "short",
+                              {date.toLocaleDateString('en-US', {
+                                month: 'short',
                               })}
                             </div>
                           </div>
                         </button>
-                      );
+                      )
                     })}
                   </div>
                 </div>
@@ -590,8 +590,8 @@ export default function DoctorDetail() {
 
                   <div className={doctorDetailStyles.patientFormGrid}>
                     <input
-                      type="text"
-                      placeholder="Full Name"
+                      type='text'
+                      placeholder='Full Name'
                       className={doctorDetailStyles.formInput}
                       value={formData.name}
                       onChange={(e) =>
@@ -600,8 +600,8 @@ export default function DoctorDetail() {
                     />
 
                     <input
-                      type="number"
-                      placeholder="Age"
+                      type='number'
+                      placeholder='Age'
                       className={doctorDetailStyles.formInput}
                       value={formData.age}
                       onChange={(e) =>
@@ -610,11 +610,11 @@ export default function DoctorDetail() {
                     />
 
                     <input
-                      type="tel"
-                      inputMode="numeric"
-                      pattern="\d{10}"
+                      type='tel'
+                      inputMode='numeric'
+                      pattern='\d{10}'
                       maxLength={10}
-                      placeholder="Mobile Number (10 digits)"
+                      placeholder='Mobile Number (10 digits)'
                       className={doctorDetailStyles.formInput}
                       value={formData.mobile}
                       onChange={(e) => handleMobileChange(e.target.value)}
@@ -628,15 +628,15 @@ export default function DoctorDetail() {
                         setFormData({ ...formData, gender: e.target.value })
                       }
                     >
-                      <option value="">Gender</option>
-                      <option value="Male">Male</option>
-                      <option value="Female">Female</option>
-                      <option value="Other">Other</option>
+                      <option value=''>Gender</option>
+                      <option value='Male'>Male</option>
+                      <option value='Female'>Female</option>
+                      <option value='Other'>Other</option>
                     </select>
 
                     <input
-                      type="email"
-                      placeholder="Email (optional - for receipts)"
+                      type='email'
+                      placeholder='Email (optional - for receipts)'
                       className={doctorDetailStyles.emailInput}
                       value={formData.email}
                       onChange={(e) =>
@@ -650,7 +650,7 @@ export default function DoctorDetail() {
               {/* RIGHT COLUMN */}
               <div className={doctorDetailStyles.timeSlotsSection}>
                 <h3 className={doctorDetailStyles.timeSlotsTitle}>
-                  <Clock className={doctorDetailStyles.timeSlotsIcon} />{" "}
+                  <Clock className={doctorDetailStyles.timeSlotsIcon} />{' '}
                   Available Time Slots
                 </h3>
 
@@ -687,7 +687,7 @@ export default function DoctorDetail() {
                         Selected Doctor:
                       </span>
                       <span className={doctorDetailStyles.summaryValue}>
-                        {doctor?.name || "—"}
+                        {doctor?.name || '—'}
                       </span>
                     </div>
 
@@ -696,7 +696,7 @@ export default function DoctorDetail() {
                         Doctor Speciality:
                       </span>
                       <span className={doctorDetailStyles.summaryValue}>
-                        {doctor?.specialization || doctor?.speciality || "—"}
+                        {doctor?.specialization || doctor?.speciality || '—'}
                       </span>
                     </div>
 
@@ -706,13 +706,13 @@ export default function DoctorDetail() {
                       </span>
                       <span className={doctorDetailStyles.summaryValue}>
                         {selectedDate
-                          ? selectedDate.toLocaleDateString("en-US", {
-                              weekday: "long",
-                              year: "numeric",
-                              month: "long",
-                              day: "numeric",
+                          ? selectedDate.toLocaleDateString('en-US', {
+                              weekday: 'long',
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric',
                             })
-                          : "Not selected"}
+                          : 'Not selected'}
                       </span>
                     </div>
 
@@ -721,7 +721,7 @@ export default function DoctorDetail() {
                         Selected Time:
                       </span>
                       <span className={doctorDetailStyles.summaryValue}>
-                        {selectedSlot || "Not selected"}
+                        {selectedSlot || 'Not selected'}
                       </span>
                     </div>
 
@@ -743,34 +743,34 @@ export default function DoctorDetail() {
                     <div className={doctorDetailStyles.paymentOptions}>
                       <label
                         className={`${doctorDetailStyles.paymentOption} ${
-                          paymentMethod === "Cash"
+                          paymentMethod === 'Cash'
                             ? doctorDetailStyles.paymentOptionSelected
                             : doctorDetailStyles.paymentOptionUnselected
                         }`}
                       >
                         <input
-                          type="radio"
-                          name="payment"
-                          value="Cash"
-                          checked={paymentMethod === "Cash"}
-                          onChange={() => setPaymentMethod("Cash")}
+                          type='radio'
+                          name='payment'
+                          value='Cash'
+                          checked={paymentMethod === 'Cash'}
+                          onChange={() => setPaymentMethod('Cash')}
                           className={doctorDetailStyles.paymentRadio}
                         />
                         Cash
                       </label>
                       <label
                         className={`${doctorDetailStyles.paymentOption} ${
-                          paymentMethod === "Online"
+                          paymentMethod === 'Online'
                             ? doctorDetailStyles.paymentOptionSelected
                             : doctorDetailStyles.paymentOptionUnselected
                         }`}
                       >
                         <input
-                          type="radio"
-                          name="payment"
-                          value="Online"
-                          checked={paymentMethod === "Online"}
-                          onChange={() => setPaymentMethod("Online")}
+                          type='radio'
+                          name='payment'
+                          value='Online'
+                          checked={paymentMethod === 'Online'}
+                          onChange={() => setPaymentMethod('Online')}
                           className={doctorDetailStyles.paymentRadio}
                         />
                         Online
@@ -790,7 +790,7 @@ export default function DoctorDetail() {
                     <div className={doctorDetailStyles.bookingButtonContent}>
                       <Phone className={doctorDetailStyles.bookingIcon} />
                       <span>
-                        {isSubmitting ? "Booking..." : "Confirm Booking"}
+                        {isSubmitting ? 'Booking...' : 'Confirm Booking'}
                       </span>
                     </div>
                   </button>
@@ -799,7 +799,7 @@ export default function DoctorDetail() {
             </div>
           </div>
         </div>
-      </div>{" "}
+      </div>{' '}
     </div>
-  );
+  )
 }

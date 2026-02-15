@@ -18,7 +18,7 @@ import {
 import { useAuth, useUser } from '@clerk/clerk-react'
 import { Toaster } from 'react-hot-toast'
 
-const API_BASE = 'http://localhost:4000'
+const API_BASE = import.meta.env.VITE_BACKEND_URL
 const API = axios.create({ baseURL: API_BASE })
 
 //helpers function
@@ -556,7 +556,7 @@ const AppointmentPage = () => {
 
               <h3 className={cardStyles.serviceName}>{srv.name}</h3>
 
-              <p className={cardStyles.price}>₹{srv.price}</p>
+              <p className={cardStyles.price}>${srv.price}</p>
 
               <p className={cardStyles.serviceDateContainer}>
                 <CalendarDays className={iconSize.medium} /> {srv.date}

@@ -321,7 +321,7 @@ export const createAppointment = async (req, res) => {
         line_items: [
           {
             price_data: {
-              currency: 'inr',
+              currency: 'myr',
               product_data: {
                 name: `Appointment - ${String(patientName).slice(0, 40)}`,
               },

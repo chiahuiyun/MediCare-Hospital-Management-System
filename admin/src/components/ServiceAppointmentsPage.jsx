@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { serviceAppointmentsStyles } from '../assets/dummyStyles'
 import { Loader2, SearchIcon, XIcon, User, Phone, BadgeDollarSign, Calendar, Clock, CheckCircle  } from 'lucide-react'
 
-const API_BASE = 'http://localhost:4000'
+const API_BASE = import.meta.env.VITE_BACKEND_URL
 
 //helpers function
 function formatTwo(n) {
@@ -742,7 +742,7 @@ const ServiceAppointmentsPage = () => {
                             className={serviceAppointmentsStyles.detailIcon}
                           />
                           <span className={serviceAppointmentsStyles.feesText}>
-                            Fees: ₹{a.fees}
+                            Fees: ${a.fees}
                           </span>
                         </div>
 

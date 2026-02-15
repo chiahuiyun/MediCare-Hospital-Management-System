@@ -3,7 +3,7 @@ import { listPageStyles } from '../assets/dummyStyles'
 import { Calendar, Phone, Search, X } from 'lucide-react'
 import { useParams } from 'react-router-dom'
 
-const API_BASE = 'http://localhost:4000'
+const API_BASE = import.meta.env.VITE_BACKEND_URL
 
 //helpers function
 function parseDateTime(date, time) {
@@ -562,7 +562,7 @@ const ListPage = () => {
                     <span className=' sm:inline'>:</span>
                     <span>{formatTimeAMPM(a.time)}</span>
                   </div>
-                  <div className={listPageStyles.feeText}>₹{a.fee}</div>
+                  <div className={listPageStyles.feeText}>${a.fee}</div>
                 </div>
 
                 <div className={listPageStyles.contactStatusSection}>

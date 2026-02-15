@@ -6,7 +6,7 @@ import {
 } from '../assets/dummyStyles'
 import { Calendar, Search, BadgeDollarSign } from 'lucide-react'
 
-const API_BASE = 'http://localhost:4000'
+const API_BASE = import.meta.env.VITE_BACKEND_URL
 
 //helpers function
 function formatDateISO(iso) {

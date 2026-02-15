@@ -243,9 +243,9 @@ const AddPage = () => {
 
       if (form.imageFile) fd.append('image', form.imageFile)
 
-      const API_BASE = 'http://localhost:4000/api'
+      const API_BASE = import.meta.env.VITE_BACKEND_URL
 
-      const res = await fetch(`${API_BASE}/doctors`, {
+      const res = await fetch(`${API_BASE}/api/doctors`, {
         method: 'POST',
         body: fd,
       })
